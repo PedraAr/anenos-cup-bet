@@ -1,1 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mis apuestas — ANEÑOS CUP BET</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header style="padding:14px; text-align:center; font-weight:800; background:#1c3b57; color:white;">
+    ANEÑOS CUP BET — Mis apuestas
+  </header>
 
+  <div class="container" style="margin-top:18px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2>Tus apuestas</h2>
+      <div>
+        <button onclick="location.href='apuestas.html'" class="btn ghost">Volver a apostar</button>
+        <button onclick="location.href='index.html'" class="btn">Inicio</button>
+      </div>
+    </div>
+
+    <div id="betsList" class="history-list panel" style="margin-top:12px;padding:12px;">
+      <p class="muted">Cargando tus apuestas...</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db, onAuthStateChanged } from './firebase.js';
+    import { collection, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+    const el = id => document.getElementById(id);
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        // not logged in -> redirect to login
+        alert('Inicia sesión para ver tus apuestas');
+        location.href = 'login.html';
+        return;
+      }
+      listenMyBets(user.uid);
+    });
+
+    function listenMyBets(uid){
+      const betsRef = collection(db, 'apuestas');
+      const q = query(betsRef, where('user', '==', uid), orderBy('fecha', 'desc'));
+      onSnapshot(q, snap => {
+        const arr = [];
+        snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
+        renderBets(arr);
+      });
+    }
+
+    function renderBets(bets){
+      const c = el('betsList'); c.innerHTML = '';
+      if(!bets || bets.length === 0){
+        c.innerHTML = '<p class="muted">No tienes apuestas registradas.</p>';
+        return;
+      }
+      bets.forEach(b => {
+        const card = document.createElement('div');
+        card.className = 'panel';
+        const when = b.fecha ? new Date(b.fecha).toLocaleString() : '';
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:800">${escapeHtml(b.tipo)} — ${escapeHtml(b.desc || (b.partido || b.equipo || ''))}</div>
+            <div class="muted">${when}</div>
+          </div>
+          <div class="muted" style="margin-top:6px">Stake: S/ ${Number(b.monto).toFixed(2)} — Potencial: S/ ${Number(b.posibleGanancia || b.potential || 0).toFixed(2)}</div>
+          <div style="margin-top:8px">Estado: <strong>${escapeHtml(b.status || 'Pendiente')}</strong></div>
+        `;
+        c.appendChild(card);
+      });
+    }
+
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+  </script>
+</body>
+</html>
