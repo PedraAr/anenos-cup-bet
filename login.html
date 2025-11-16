@@ -1,1 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login - ANEÑOS CUP BET</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
 
+<header>Iniciar Sesión</header>
+
+<div class="container">
+  <input id="email" placeholder="Correo">
+  <input id="password" type="password" placeholder="Contraseña">
+
+  <button id="loginBtn">Entrar</button>
+</div>
+
+<script type="module">
+  import {
+    auth,
+    signInWithEmailAndPassword
+  } from "./firebase.js";
+
+  document.getElementById("loginBtn").onclick = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email.value, password.value);
+      location.href = "apuestas.html";
+    } catch (e) {
+      alert("Credenciales incorrectas");
+    }
+  };
+</script>
+
+</body>
+</html>
