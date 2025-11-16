@@ -1,1 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Apuestas - ANEÑOS CUP BET</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
 
+<body>
+
+<header>Apuestas - ANEÑOS CUP BET</header>
+
+<div class="container">
+  <h2>Realiza tus apuestas</h2>
+
+  <h3>Partidos del campeonato</h3>
+  <ul>
+    <li>17 Nov – 13:25 → 1er año Morados vs 2do año Celestes</li>
+    <li>18 Nov – 13:15 → 3er año Naranjas vs 4to año Amarillos</li>
+    <li>20 Nov – 13:15 → Semifinal</li>
+    <li>21 Nov – 13:15 → Final vs 5to año Grises</li>
+  </ul>
+
+  <hr>
+
+  <!-- Apuesta marcador exacto -->
+  <h3>🏟 Apuesta por marcador exacto</h3>
+  <label>Selecciona partido:</label>
+  <select id="matchExacto">
+    <option value="m1">Morados vs Celestes</option>
+    <option value="m2">Naranjas vs Amarillos</option>
+    <option value="semi">Semifinal</option>
+    <option value="final">Final</option>
+  </select>
+
+  <label>Goles equipo A:</label>
+  <input id="golesA" type="number" min="0">
+
+  <label>Goles equipo B:</label>
+  <input id="golesB" type="number" min="0">
+
+  <label>Monto apostado (S/):</label>
+  <input id="montoExacto" type="number" min="1">
+
+  <button id="apostarExacto">Apostar marcador exacto</button>
+
+  <hr>
+
+  <!-- Apuesta número total de goles -->
+  <h3>⚽ Apuesta por número total de goles</h3>
+  <select id="matchGoles">
+    <option value="m1">Morados vs Celestes</option>
+    <option value="m2">Naranjas vs Amarillos</option>
+    <option value="semi">Semifinal</option>
+    <option value="final">Final</option>
+  </select>
+
+  <label>Total de goles:</label>
+  <input id="totalGoles" type="number" min="0">
+
+  <label>Monto apostado (S/):</label>
+  <input id="montoGoles" type="number" min="1">
+
+  <button id="apostarGoles">Apostar total de goles</button>
+
+  <hr>
+
+  <!-- Apuesta por ganador -->
+  <h3>🏆 Apuesta por ganador del partido</h3>
+  <select id="matchWinner">
+    <option value="m1">Morados vs Celestes</option>
+    <option value="m2">Naranjas vs Amarillos</option>
+    <option value="semi">Semifinal</option>
+    <option value="final">Final</option>
+  </select>
+
+  <label>Elige ganador:</label>
+  <select id="equipoWinner">
+    <option value="A">Equipo A</option>
+    <option value="B">Equipo B</option>
+  </select>
+
+  <label>Monto apostado (S/):</label>
+  <input id="montoWinner" type="number" min="1">
+
+  <button id="apostarWinner">Apostar por ganador</button>
+
+  <hr>
+
+  <!-- Apuesta campeón -->
+  <h3>👑 Apuesta por campeón del torneo</h3>
+  <select id="equipoCampeon">
+    <option value="Morados">1er año Morados</option>
+    <option value="Celestes">2do año Celestes</option>
+    <option value="Naranjas">3er año Naranjas</option>
+    <option value="Amarillos">4to año Amarillos</option>
+    <option value="Grises">5to año Grises</option>
+  </select>
+
+  <label>Monto apostado (S/):</label>
+  <input id="montoCampeon" type="number" min="1">
+
+  <button id="apostarCampeon">Apostar campeón</button>
+
+  <hr>
+
+  <button onclick="location.href='resultados.html'">Ver mis apuestas</button>
+  <button onclick="location.href='index.html'">Salir</button>
+</div>
+
+<script type="module">
+  import {
+    auth,
+    onAuthStateChanged,
+    db,
+    addDoc,
+    collection
+  } from "./firebase.js";
+
+  onAuthStateChanged(auth, user => {
+    if (!user) location.href = "login.html";
+  });
+
+  // MULTIPLICADORES (máximo x3)
+  function getMultiplicador(riesgo) {
+    if (riesgo === "exacto") return 3;     // marcador exacto = más riesgo
+    if (riesgo === "goles") return 2;      // mediano riesgo
+    if (riesgo === "winner") return 1.5;   // bajo riesgo
+    if (riesgo === "campeon") return 3;    // difícil elegir campeón
+  }
+
+  document.getElementById("apostarExacto").onclick = async () => {
+    const user = auth.currentUser;
+
+    await addDoc(collection(db, "apuestas"), {
+      user: user.uid,
+      tipo: "marcador",
+      partido: matchExacto.value,
+      golesA: golesA.value,
+      golesB: golesB.value,
+      monto: montoExacto.value,
+      posibleGanancia: montoExacto.value * getMultiplicador("exacto"),
+      fecha: Date.now()
+    });
+
+    alert("Apuesta registrada");
+  };
+
+  document.getElementById("apostarGoles").onclick = async () => {
+    const user = auth.currentUser;
+
+    await addDoc(collection(db, "apuestas"), {
+      user: user.uid,
+      tipo: "totalGoles",
+      partido: matchGoles.value,
+      goles: totalGoles.value,
+      monto: montoGoles.value,
+      posibleGanancia: montoGoles.value * getMultiplicador("goles"),
+      fecha: Date.now()
+    });
+
+    alert("Apuesta registrada");
+  };
+
+  document.getElementById("apostarWinner").onclick = async () => {
+    const user = auth.currentUser;
+
+    await addDoc(collection(db, "apuestas"), {
+      user: user.uid,
+      tipo: "winner",
+      partido: matchWinner.value,
+      ganador: equipoWinner.value,
+      monto: montoWinner.value,
+      posibleGanancia: montoWinner.value * getMultiplicador("winner"),
+      fecha: Date.now()
+    });
+
+    alert("Apuesta registrada");
+  };
+
+  document.getElementById("apostarCampeon").onclick = async () => {
+    const user = auth.currentUser;
+
+    await addDoc(collection(db, "apuestas"), {
+      user: user.uid,
+      tipo: "campeon",
+      equipo: equipoCampeon.value,
+      monto: montoCampeon.value,
+      posibleGanancia: montoCampeon.value * getMultiplicador("campeon"),
+      fecha: Date.now()
+    });
+
+    alert("Apuesta por campeón registrada");
+  };
+</script>
+
+</body>
+</html>
