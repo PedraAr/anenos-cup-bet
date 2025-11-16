@@ -1,1 +1,258 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — ANEÑOS CUP BET</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header style="padding:14px; text-align:center; font-weight:800; background:#0f2430; color:white;">
+    Panel Admin — ANEÑOS CUP BET
+  </header>
 
+  <div class="container" style="margin-top:18px;">
+    <div class="panel">
+      <label>Clave admin</label>
+      <input id="adminKey" type="password" placeholder="Introduce la clave" />
+      <div style="margin-top:8px">
+        <button id="unlock" class="btn primary">Desbloquear panel</button>
+        <button onclick="location.href='index.html'" class="btn ghost">Volver</button>
+      </div>
+      <p class="muted small" style="margin-top:8px">Protección simple por clave (protótipo). Clave: <strong>password</strong></p>
+    </div>
+
+    <div id="adminArea" class="hidden" style="margin-top:12px;">
+      <div class="admin-grid">
+        <div>
+          <div class="panel">
+            <h3>Partidos</h3>
+            <div id="matchesAdmin" class="history-list"></div>
+
+            <hr>
+
+            <h4>Crear / editar partido</h4>
+            <label>ID (ej: M1)</label><input id="editId" placeholder="M1" />
+            <label>Equipo local</label><input id="editHome" placeholder="MORADOS" />
+            <label>Equipo visitante</label><input id="editAway" placeholder="CELESTES" />
+            <label>Fecha ISO (ej: 2025-11-17T13:25:00)</label><input id="editDatetime" placeholder="2025-11-17T13:25:00" />
+            <div style="margin-top:8px">
+              <button id="saveMatch" class="btn primary">Guardar</button>
+              <button id="seedBtn" class="btn ghost">Sembrar partidos</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <h3>Apuestas recibidas</h3>
+            <div id="betsAdmin" class="history-list"></div>
+          </div>
+
+          <div class="panel" style="margin-top:12px;">
+            <h3>Operaciones rápidas</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="assignSemis" class="btn">Asignar semifinalistas</button>
+              <button id="assignFinal" class="btn">Asignar final vs GRISES</button>
+              <button id="resetScores" class="btn ghost">Resetear marcadores</button>
+            </div>
+            <p class="muted small" style="margin-top:8px">Asignaciones automáticas usan los resultados guardados en M1/M2/M3.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from './firebase.js';
+    import {
+      collection, doc, setDoc, getDoc, getDocs,
+      query, orderBy, onSnapshot, updateDoc
+    } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+    const el = id => document.getElementById(id);
+
+    // Unlock admin
+    el('unlock').addEventListener('click', ()=>{
+      const k = el('adminKey').value;
+      if(k === 'password'){
+        el('adminArea').classList.remove('hidden');
+        el('adminKey').value = '';
+        loadMatches();
+        loadBets();
+      } else {
+        alert('Clave incorrecta');
+      }
+    });
+
+    // Load matches realtime
+    function loadMatches(){
+      const matchesRef = collection(db, 'matches');
+      const q = query(matchesRef, orderBy('datetime'));
+      onSnapshot(q, snap => {
+        const c = el('matchesAdmin'); c.innerHTML = '';
+        snap.forEach(d => {
+          const m = { id: d.id, ...d.data() };
+          const card = document.createElement('div');
+          card.className = 'panel';
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><strong>${m.id}</strong> ${m.home || 'TBD'} vs ${m.away || 'TBD'}</div>
+              <div class="muted">${new Date(m.datetime).toLocaleString()}</div>
+            </div>
+            <div class="muted" style="margin-top:6px">Estado: ${m.status || 'Programado'} — Marcador: ${m.homeGoals||0} - ${m.awayGoals||0}</div>
+            <div style="margin-top:8px">
+              <button class="btn small" data-edit="${m.id}">Editar</button>
+              <button class="btn small" data-start="${m.id}">${m.started ? 'Detener' : 'Iniciar'}</button>
+              <button class="btn small" data-inc="${m.id}">+1 local</button>
+              <button class="btn small" data-inc-away="${m.id}">+1 visitante</button>
+            </div>
+          `;
+          c.appendChild(card);
+        });
+        // attach handlers after nodes exist
+        c.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', async ()=>{
+          const id = btn.getAttribute('data-edit');
+          const snap = await getDoc(doc(db,'matches',id));
+          if(snap.exists()){
+            const m = snap.data();
+            el('editId').value = id;
+            el('editHome').value = m.home || '';
+            el('editAway').value = m.away || '';
+            el('editDatetime').value = m.datetime || '';
+          }
+        }));
+        c.querySelectorAll('[data-start]').forEach(btn => btn.addEventListener('click', async ()=>{
+          const id = btn.getAttribute('data-start');
+          const ref = doc(db,'matches',id);
+          const snap = await getDoc(ref);
+          if(snap.exists()){
+            const cur = snap.data();
+            await updateDoc(ref, { started: !cur.started, status: !cur.started ? 'En curso' : 'Finalizado' });
+          }
+        }));
+        c.querySelectorAll('[data-inc]').forEach(btn => btn.addEventListener('click', async ()=>{
+          const id = btn.getAttribute('data-inc');
+          const ref = doc(db,'matches',id);
+          const snap = await getDoc(ref);
+          if(snap.exists()){
+            const cur = snap.data();
+            await updateDoc(ref, { homeGoals: (cur.homeGoals||0) + 1 });
+          }
+        }));
+        c.querySelectorAll('[data-inc-away]').forEach(btn => btn.addEventListener('click', async ()=>{
+          const id = btn.getAttribute('data-inc-away');
+          const ref = doc(db,'matches',id);
+          const snap = await getDoc(ref);
+          if(snap.exists()){
+            const cur = snap.data();
+            await updateDoc(ref, { awayGoals: (cur.awayGoals||0) + 1 });
+          }
+        }));
+      });
+    }
+
+    // Save match button
+    el('saveMatch').addEventListener('click', async ()=>{
+      const id = el('editId').value.trim();
+      const home = el('editHome').value.trim();
+      const away = el('editAway').value.trim();
+      const datetime = el('editDatetime').value.trim();
+      if(!id || !home || !away || !datetime) return alert('Completa todos los campos');
+      await setDoc(doc(db,'matches',id), { home, away, datetime, homeGoals:0, awayGoals:0, started:false, status:'Programado' });
+      alert('Partido guardado');
+    });
+
+    // Seed matches (M1..M4) with the times you requested
+    el('seedBtn').addEventListener('click', async ()=>{
+      if(!confirm('Crear/actualizar M1..M4 con horarios definidos?')) return;
+      const seed = [
+        { id:'M1', home:'MORADOS', away:'CELESTES', datetime:'2025-11-17T13:25:00' },
+        { id:'M2', home:'NARANJAS', away:'AMARILLOS', datetime:'2025-11-18T13:15:00' },
+        { id:'M3', home:null, away:null, datetime:'2025-11-20T13:15:00' },
+        { id:'M4', home:null, away:'GRISES', datetime:'2025-11-21T13:15:00' }
+      ];
+      for(const m of seed){
+        await setDoc(doc(db,'matches',m.id), { home:m.home, away:m.away, datetime:m.datetime, homeGoals:0, awayGoals:0, started:false, status:'Programado' });
+      }
+      alert('Partidos sembrados/actualizados');
+    });
+
+    // Load bets admin (realtime)
+    function loadBets(){
+      const betsRef = collection(db,'apuestas');
+      const q = query(betsRef, orderBy('fecha','desc'));
+      onSnapshot(q, snap => {
+        const c = el('betsAdmin'); c.innerHTML = '';
+        snap.forEach(d => {
+          const b = { id: d.id, ...d.data() };
+          const card = document.createElement('div');
+          card.className = 'panel';
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between"><div><strong>${b.userName || b.user || b.userId}</strong></div><div class="muted">${b.type || b.tipo}</div></div>
+            <div class="muted" style="margin-top:6px">${b.desc || (b.partido || b.equipo) } — S/ ${Number(b.monto || b.stake || 0).toFixed(2)} — Potencial S/ ${Number(b.posibleGanancia || b.potential || 0).toFixed(2)}</div>
+            <div style="margin-top:8px">Estado: <strong>${b.status || 'Pendiente'}</strong></div>
+          `;
+          c.appendChild(card);
+        });
+      });
+    }
+
+    // Quick admin actions
+    el('assignSemis').addEventListener('click', async ()=>{
+      if(!confirm('Asignar semifinalistas automáticamente desde M1 y M2?')) return;
+      const m1 = await getDoc(doc(db,'matches','M1'));
+      const m2 = await getDoc(doc(db,'matches','M2'));
+      if(!m1.exists() || !m2.exists()) return alert('M1 o M2 no existen');
+      const r1 = m1.data(), r2 = m2.data();
+      const winner1 = (r1.homeGoals||0) > (r1.awayGoals||0) ? r1.home : ((r1.homeGoals||0) < (r1.awayGoals||0) ? r1.away : null);
+      const winner2 = (r2.homeGoals||0) > (r2.awayGoals||0) ? r2.home : ((r2.homeGoals||0) < (r2.awayGoals||0) ? r2.away : null);
+      if(!winner1 || !winner2) return alert('Uno de los partidos no tiene ganador (empate). Ajusta manualmente.');
+      await updateDoc(doc(db,'matches','M3'), { home: winner1, away: winner2, status:'Programado' });
+      alert('Semifinal asignada: ' + winner1 + ' vs ' + winner2);
+    });
+
+    el('assignFinal').addEventListener('click', async ()=>{
+      if(!confirm('Asignar final (ganador M3 vs GRISES)?')) return;
+      const m3 = await getDoc(doc(db,'matches','M3'));
+      if(!m3.exists()) return alert('M3 no existe');
+      const r3 = m3.data();
+      const winner3 = (r3.homeGoals||0) > (r3.awayGoals||0) ? r3.home : ((r3.homeGoals||0) < (r3.awayGoals||0) ? r3.away : null);
+      if(!winner3) return alert('M3 no tiene ganador (empate). Ajusta manualmente.');
+      await updateDoc(doc(db,'matches','M4'), { home: winner3, away: 'GRISES', status:'Programado' });
+      alert('Final asignada: ' + winner3 + ' vs GRISES');
+    });
+
+    // Reset scores
+    el('resetScores').addEventListener('click', async ()=>{
+      if(!confirm('Resetear marcadores de todos los partidos a 0?')) return;
+      const snap = await getDocs(collection(db,'matches'));
+      for(const d of snap.docs){
+        await updateDoc(doc(db,'matches',d.id), { homeGoals:0, awayGoals:0, started:false, status:'Programado' });
+      }
+      alert('Marcadores reseteados');
+    });
+
+    // start loading bets when admin area opens
+    function loadBets(){ // defined twice purposely to ensure closure
+      const betsRef = collection(db,'apuestas');
+      const q = query(betsRef, orderBy('fecha','desc'));
+      onSnapshot(q, snap => {
+        const c = el('betsAdmin'); c.innerHTML = '';
+        snap.forEach(d => {
+          const b = { id: d.id, ...d.data() };
+          const card = document.createElement('div');
+          card.className = 'panel';
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between"><div><strong>${b.userName || b.user || b.userId}</strong></div><div class="muted">${b.type || b.tipo}</div></div>
+            <div class="muted" style="margin-top:6px">${b.desc || (b.partido || b.equipo) } — S/ ${Number(b.monto || b.stake || 0).toFixed(2)} — Potencial S/ ${Number(b.posibleGanancia || b.potential || 0).toFixed(2)}</div>
+            <div style="margin-top:8px">Estado: <strong>${b.status || 'Pendiente'}</strong></div>
+          `;
+          c.appendChild(card);
+        });
+      });
+    }
+
+  </script>
+</body>
+</html>
