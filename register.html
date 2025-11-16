@@ -1,1 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Registro - ANEÑOS CUP BET</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
 
+<header>Registrarse</header>
+
+<div class="container">
+  <h3>Crear cuenta</h3>
+
+  <input id="name" placeholder="Tu nombre">
+  <input id="email" placeholder="Correo">
+  <input id="password" type="password" placeholder="Contraseña">
+
+  <button id="registerBtn">Registrarme</button>
+</div>
+
+<script type="module">
+  import {
+    auth,
+    db,
+    createUserWithEmailAndPassword,
+    setDoc,
+    doc
+  } from "./firebase.js";
+
+  document.getElementById("registerBtn").onclick = async () => {
+    const name = nameInput.value;
+    const email = emailInput.value;
+    const pass = password.value;
+
+    const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+
+    await setDoc(doc(db, "users", userCred.user.uid), {
+      name: name,
+      email: email
+    });
+
+    alert("Cuenta creada");
+    location.href = "apuestas.html";
+  };
+</script>
+
+</body>
+</html>
