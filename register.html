@@ -1,48 +1,34 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Registro - ANEÑOS CUP BET</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-
-<header>Registrarse</header>
-
-<div class="container">
-  <h3>Crear cuenta</h3>
-
-  <input id="name" placeholder="Tu nombre">
-  <input id="email" placeholder="Correo">
-  <input id="password" type="password" placeholder="Contraseña">
-
-  <button id="registerBtn">Registrarme</button>
-</div>
-
 <script type="module">
-  import {
-    auth,
-    db,
-    createUserWithEmailAndPassword,
-    setDoc,
-    doc
-  } from "./firebase.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
-  document.getElementById("registerBtn").onclick = async () => {
-    const name = nameInput.value;
-    const email = emailInput.value;
-    const pass = password.value;
-
-    const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-
-    await setDoc(doc(db, "users", userCred.user.uid), {
-      name: name,
-      email: email
-    });
-
-    alert("Cuenta creada");
-    location.href = "apuestas.html";
+  const firebaseConfig = {
+    apiKey: "AIzaSyCc4dw-ui7r4yAya3IOJV84gxNnrVG1aYw",
+    authDomain: "anenos-cup-bet.firebaseapp.com",
+    projectId: "anenos-cup-bet",
+    storageBucket: "anenos-cup-bet.firebasestorage.app",
+    messagingSenderId: "238398198636",
+    appId: "1:238398198636:web:ae93107f814cd403261949"
   };
-</script>
 
-</body>
-</html>
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const registerForm = document.getElementById('registerForm');
+
+  registerForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        alert("Cuenta creada exitosamente");
+        // Aquí puedes redirigir al login
+        window.location.href = 'login.html';
+      })
+      .catch((error) => {
+        alert(error.message);
+      });
+  });
+</script>
