@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>ANEÑOS CUP BET</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -18,6 +19,29 @@
   <button onclick="location.href='login.html'">Iniciar sesión</button>
   <button onclick="location.href='register.html'">Crear cuenta</button>
 </div>
+
+<!-- Scripts de Firebase -->
+<script type="module">
+  // Importar Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getAuth } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+  // Configuración de Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyCc4dw-ui7r4yAya3IOJV84gxNnrVG1aYw",
+    authDomain: "anenos-cup-bet.firebaseapp.com",
+    projectId: "anenos-cup-bet",
+    storageBucket: "anenos-cup-bet.firebasestorage.app",
+    messagingSenderId: "238398198636",
+    appId: "1:238398198636:web:ae93107f814cd403261949"
+  };
+
+  // Inicializar Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+</script>
 
 </body>
 </html>
